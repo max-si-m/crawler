@@ -12,6 +12,11 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 		cfg.wg.Done()
 	}()
 
+	if cfg.reachLimit() {
+		return
+	}
+
+	fmt.Println("crawl: ", rawCurrentURL)
 	if !sameDomain(cfg.baseURL, rawCurrentURL) {
 		return
 	}
