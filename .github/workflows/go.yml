@@ -1,7 +1,4 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
-
-name: Go
+name: Crawler - Go
 
 on:
   push:
@@ -14,15 +11,36 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Check out code
+      uses: actions/checkout@v4
 
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.22.2'
+        go-version: ${{ matrix.go-version }}
 
-    - name: Build
-      run: go build -v ./...
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ matrix.go-version }}
+
+    - name: Install dependencies
+      run: go mod tidy
 
     - name: Test
       run: go test -v ./...
+
+    - name: Build
+      run: go build -o crawler
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: crawler-${{ matrix.os }}-${{ matrix.go-version }}
+        path: |
+          crawler*
