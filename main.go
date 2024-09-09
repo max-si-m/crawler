@@ -20,5 +20,8 @@ func main() {
 
 	baseURL := args[0]
 	fmt.Printf("starting crawl of: %s\n", baseURL)
-	fmt.Println(getHTML(baseURL))
+	pages := make(map[string]int)
+	crawlPage(baseURL, baseURL, pages)
+
+	fmt.Println("pages hash: ", pages)
 }
