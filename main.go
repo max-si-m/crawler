@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"sync"
 )
 
 func main() {
@@ -27,14 +26,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	config := config{
-		baseURL: baseURL,
-		pages: make(map[string]int),
-		concurrencyControl: make(chan struct{}, 2),
-		mu: &sync.Mutex{},
-	}
+	config := NewConfig(baseURL)
 	fmt.Printf("starting crawl of: %s\n", baseURL)
-	config.crawlPage(baseURL.String())
 
+	config.crawlPage(baseURL.String())
 	fmt.Println("pages hash: ", config.pages)
 }

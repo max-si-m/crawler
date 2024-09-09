@@ -12,3 +12,13 @@ type config struct {
 	mu                 *sync.Mutex
 	wg                 *sync.WaitGroup
 }
+
+func NewConfig(baseURL *url.URL) *config {
+	return &config{
+		baseURL: baseURL,
+		pages: make(map[string]int),
+		concurrencyControl: make(chan struct{}, 2),
+		mu: &sync.Mutex{},
+		wg: &sync.WaitGroup{},
+	}
+}
