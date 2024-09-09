@@ -5,14 +5,8 @@ import (
 	"net/url"
 )
 
-func crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
-	if !sameDomain(rawBaseURL, rawCurrentURL) {
-		return
-	}
-
-	baseURL, err := url.Parse(rawBaseURL)
-	if err != nil {
-		fmt.Println("Error parsing base URL:", err)
+func (cfg *config) crawlPage(rawCurrentURL string) {
+	if !sameDomain(cfg.baseURL, rawCurrentURL) {
 		return
 	}
 
@@ -23,19 +17,16 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
 	}
 
 	if !currentURL.IsAbs() {
-		currentURL = baseURL.ResolveReference(currentURL)
+		currentURL = cfg.baseURL.ResolveReference(currentURL)
 	}
 
-	key, err := normalizeURL(currentURL.String())
+	normalizedURL, err := normalizeURL(currentURL.String())
 	if err != nil {
-		fmt.Println("Error normalizing URL:", err)
+		fmt.Println("Error normalizing current URL:", err)
 		return
 	}
-
-	pages[key]++
-
-	if pages[key] > 1 {
-		fmt.Printf("Already crawled: %s\n", key)
+	isFirst := cfg.addPageVisit(normalizedURL)
+	if !isFirst {
 		return
 	}
 
@@ -50,20 +41,28 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
 	}
 
 	for _, rawNextURL := range urls {
-		crawlPage(rawBaseURL, rawNextURL, pages)
+		cfg.crawlPage(rawNextURL)
 	}
 }
 
-func sameDomain(baseURL, rawCurrentURL string) bool {
-	baseParsed, err := url.Parse(baseURL)
-	if err != nil {
-		return false
-	}
+func (cfg *config) addPageVisit(normalizedURL string) (isFirst bool) {
+	isFirst = false
 
+	if _, ok := cfg.pages[normalizedURL]; !ok {
+		isFirst = true
+	}
+	cfg.mu.Lock()
+	cfg.pages[normalizedURL]++
+	cfg.mu.Unlock()
+
+	return
+}
+
+func sameDomain(baseURL *url.URL, rawCurrentURL string) bool {
 	currentParsed, err := url.Parse(rawCurrentURL)
 	if err != nil {
 		return false
 	}
 
-	return baseParsed.Host == currentParsed.Host
+	return baseURL.Host == currentParsed.Host
 }
