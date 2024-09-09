@@ -13,11 +13,24 @@ type config struct {
 	wg                 *sync.WaitGroup
 }
 
-func NewConfig(baseURL *url.URL) *config {
+func (cfg *config) addPageVisit(normalizedURL string) (isFirst bool) {
+	isFirst = false
+
+	cfg.mu.Lock()
+	if _, ok := cfg.pages[normalizedURL]; !ok {
+		isFirst = true
+	}
+	cfg.pages[normalizedURL]++
+	cfg.mu.Unlock()
+
+	return isFirst
+}
+
+func NewConfig(baseURL *url.URL, maxConcurrency int) *config {
 	return &config{
 		baseURL: baseURL,
 		pages: make(map[string]int),
-		concurrencyControl: make(chan struct{}, 2),
+		concurrencyControl: make(chan struct{}, maxConcurrency),
 		mu: &sync.Mutex{},
 		wg: &sync.WaitGroup{},
 	}

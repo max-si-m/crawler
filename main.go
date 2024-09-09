@@ -26,9 +26,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	config := NewConfig(baseURL)
+	config := NewConfig(baseURL, 6)
 	fmt.Printf("starting crawl of: %s\n", baseURL)
 
-	config.crawlPage(baseURL.String())
-	fmt.Println("pages hash: ", config.pages)
+	config.wg.Add(1)
+	go config.crawlPage(rawBaseURL)
+	config.wg.Wait()
+
+	for normalizedURL, count := range config.pages {
+		fmt.Printf("%d - %s\n", count, normalizedURL)
+	}
 }

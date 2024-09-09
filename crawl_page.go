@@ -6,6 +6,12 @@ import (
 )
 
 func (cfg *config) crawlPage(rawCurrentURL string) {
+	cfg.concurrencyControl <- struct{}{}
+	defer func() {
+		<-cfg.concurrencyControl
+		cfg.wg.Done()
+	}()
+
 	if !sameDomain(cfg.baseURL, rawCurrentURL) {
 		return
 	}
@@ -25,6 +31,7 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 		fmt.Println("Error normalizing current URL:", err)
 		return
 	}
+
 	isFirst := cfg.addPageVisit(normalizedURL)
 	if !isFirst {
 		return
@@ -35,27 +42,15 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 		return
 	}
 
-	urls, err := getURLsFromHTML(currentHTML, rawCurrentURL)
+	urls, err := getURLsFromHTML(currentHTML, cfg.baseURL.String())
 	if err != nil {
 		return
 	}
 
 	for _, rawNextURL := range urls {
-		cfg.crawlPage(rawNextURL)
+		cfg.wg.Add(1)
+		go cfg.crawlPage(rawNextURL)
 	}
-}
-
-func (cfg *config) addPageVisit(normalizedURL string) (isFirst bool) {
-	isFirst = false
-
-	if _, ok := cfg.pages[normalizedURL]; !ok {
-		isFirst = true
-	}
-	cfg.mu.Lock()
-	cfg.pages[normalizedURL]++
-	cfg.mu.Unlock()
-
-	return
 }
 
 func sameDomain(baseURL *url.URL, rawCurrentURL string) bool {
